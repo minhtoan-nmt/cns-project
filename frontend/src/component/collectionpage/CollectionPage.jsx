@@ -23,7 +23,7 @@ export default function CollectionPage() {
                     <img src={title} alt="TỐI GIẢN" className="relative left-25 mx-auto" />
                     <p>The Clean Era Collection đánh dấu cách CNS quay về những giá trị cốt lõi: form dáng vừa vặn, chất liệu dễ chịu và thiết kế đủ tinh tế để tôn lên đường nét tự nhiên. Mỗi món đồ được tạo ra để đồng hành cùng bạn trong mọi nhịp sống - từ công việc, vận động đến những khoảng nghỉ riêng tư - theo cách giản lược nhưng có chủ đích.</p>
                     <div className="mt-10">
-                        <Link to={"/product"}><Button content={"Khám phá ngay"}></Button></Link>
+                        <Link to="/product?collection=valentine"><Button content="Khám phá ngay" /></Link>
                     </div>
                 </div>
                 <div className="w-1/2">

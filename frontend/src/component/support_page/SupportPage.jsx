@@ -107,21 +107,38 @@ export default function SupportPage() {
                     </ul>
                 </div>
 
-                {/* Cột phải: Social Icons */}
-                <div className="w-full md:w-1/3 flex justify-end gap-3 order-3">
-                    {/* Các icon mạng xã hội giữ nguyên... */}
-                    <div className="w-10 h-10 bg-white/20 rounded md:rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                    </div>
-                    <div className="w-10 h-10 bg-white/20 rounded md:rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
+                {/* Cột phải: Social Icons + Hotline */}
+                <div id="contact-info" className="w-full md:w-1/3 flex justify-end gap-3 items-center order-3">
+                    {/* Facebook */}
+                    <a 
+                        href="https://www.facebook.com/profile.php?id=61587352830930" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="w-10 h-10 bg-white/20 rounded md:rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/30 transition"
+                        aria-label="Facebook Cleannie Studio"
+                    >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
-                    </div>
-                    <div className="w-10 h-10 bg-white/20 rounded md:rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
+                    </a>
+                    {/* Instagram */}
+                    <a 
+                        href="https://www.instagram.com/cleannie.studio/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="w-10 h-10 bg-white/20 rounded md:rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/30 transition"
+                        aria-label="Instagram cleannie.studio"
+                    >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                    </div>
-                    <div className="w-10 h-10 bg-white/20 rounded md:rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
+                    </a>
+                    {/* TikTok */}
+                    <a 
+                        href="https://www.tiktok.com/@cnsstudio" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="w-10 h-10 bg-white/20 rounded md:rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/30 transition"
+                        aria-label="TikTok @cnsstudio"
+                    >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3V0Z"/></svg>
-                    </div>
+                    </a>
                 </div>
                 </div>
 
@@ -178,14 +195,6 @@ export default function SupportPage() {
                     </div>
                 </div>
 
-                {/* --- FOOTER SOCIAL ICONS (Đóng vai trò là Thông tin liên lạc) --- */}
-                {/* Thêm id */}
-                <div id="contact-info" className="flex justify-end gap-3 px-4 md:px-0 max-w-5xl mx-auto mt-20 scroll-mt-24">
-                    {/* Icon mạng xã hội giữ nguyên... */}
-                    <div className="w-9 h-9 bg-white/20 rounded flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                    </div>
-                </div>
             </div>
         </div>
     </>)

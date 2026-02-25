@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Cookies from "js-cookie";
 
 import Navbar from "../../Navbar"; // Kiểm tra lại path
@@ -9,14 +9,22 @@ import HistoryView from "./components/HistoryView";
 import WishlistView from "./components/WishlistView";
 
 export default function SuccessPage() {
-    const [activeTab, setActiveTab] = useState("profile");
     const nav = useNavigate();
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState("profile");
 
     useEffect(() => {
       if (!Cookies.get("token")) {
         nav("/login");
       }
     }, [nav]);
+
+    // Mở tab Lịch sử mua hàng khi từ trang Thanh toán (sau khi đặt hàng thành công)
+    useEffect(() => {
+      if (location.state?.openTab === "history") {
+        setActiveTab("history");
+      }
+    }, [location.state]);
 
     // Render nội dung tương ứng với tab đang chọn
     const renderContent = () => {

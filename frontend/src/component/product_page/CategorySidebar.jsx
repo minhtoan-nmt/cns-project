@@ -9,7 +9,7 @@ const CategorySidebar = ({ isOpen, options, selectedCategories, onToggle }) => {
         >
             <div className="w-75">
                 {options.map((option, idx) => {
-                    const isSelected = selectedCategories.includes(option);
+                    const isSelected = option === "Tất cả" ? selectedCategories.length === 0 : selectedCategories.includes(option);
                     return (
                         <div
                             key={idx}
@@ -21,12 +21,12 @@ const CategorySidebar = ({ isOpen, options, selectedCategories, onToggle }) => {
                                 {option}
                             </span>
                             
-                            {/* Hiển thị icon dựa trên trạng thái */}
+                            {/* Hiển thị icon: chọn = dấu tích đen, chưa chọn = vòng trắng */}
                             <div className="text-2xl">
                                 {isSelected ? (
                                     <MdCheckCircle className="text-black" /> 
                                 ) : (
-                                    <MdCheckCircleOutline className="text-gray-500" />
+                                    <MdCheckCircleOutline className="text-gray-300" />
                                 )}
                             </div>
                         </div>

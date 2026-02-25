@@ -1,95 +1,60 @@
 import React from "react";
-import product1 from "../../../../assets/product1.png"; // Chỉnh sửa lại path nếu cần
-import product2 from "../../../../assets/product2.png"; 
 
-// Sub-component chỉ dùng trong HistoryView để hiển thị từng sản phẩm
-const Item = ({ image, title, price, sizes, stockWarning, colorDotClass }) => (
-    <div className="flex gap-6 pb-6 border-b border-[#D8CFC6]">
-        <div className="w-32 h-40 bg-white rounded-2xl overflow-hidden shrink-0 shadow-sm">
-        <img src={image} alt={title} className="w-full h-full object-cover" />
-        </div>
+const IMG_BASE = "/images/products/HÌNH ẢNH SẢN PHẨM/HÌNH ẢNH SẢN PHẨM";
 
-        <div className="flex-1 space-y-2">
-        <div>
-            <h3 className="text-xl font-medium">{title}</h3>
-            <p className="text-sm font-semibold mt-1">{price}</p>
-        </div>
+const formatCurrency = (amount) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
-        <div className="pt-2">
-            <p className="text-xs mb-1 font-medium">Size</p>
-            <div className="flex items-center gap-4">
-            <div className="flex gap-2">
-                {sizes.map((sizeObj, idx) => (
-                <span
-                    key={idx}
-                    className={`w-8 h-8 border border-[#4a3b32] flex items-center justify-center text-xs ${
-                    sizeObj.active
-                        ? "bg-[#C5B5A9] font-bold"
-                        : "text-gray-400"
-                    } ${sizeObj.disabled ? "box-decoration-slice line-through" : ""}`}
-                >
-                    {sizeObj.label}
-                </span>
-                ))}
-            </div>
-            {stockWarning && (
-                <span className="text-xs text-red-700 font-medium">
-                {stockWarning}
-                </span>
-            )}
-            </div>
-        </div>
-
-        <div className="pt-2 space-y-2">
-            <div className={`w-5 h-5 rounded-full border border-gray-300 ${colorDotClass}`}></div>
-            <div className="flex items-center space-x-2">
-            <span className="text-xs font-medium">Số lượng</span>
-            <div className="flex items-center border border-[#4a3b32] h-7">
-                <button className="px-2 hover:bg-gray-200">-</button>
-                <span className="px-2 text-sm">1</span>
-                <button className="px-2 hover:bg-gray-200">+</button>
-            </div>
-            </div>
-        </div>
-        </div>
-    </div>
-);
-
-export { Item };
+/** Dữ liệu mẫu lịch sử mua hàng */
+const SAMPLE_HISTORY = [
+    {
+        productName: "Butterline Tennis Dress",
+        price: 1000000,
+        quantity: 1,
+        size: "M",
+        imageSrc: `${IMG_BASE}/THỜI TRANG NỮ/Butter set.JPG`,
+    },
+    {
+        productName: "Baby Top",
+        price: 1000000,
+        quantity: 1,
+        size: "M",
+        imageSrc: `${IMG_BASE}/THỜI TRANG NỮ/Emily top.jpg`,
+    },
+];
 
 export default function HistoryView() {
+    const total = SAMPLE_HISTORY.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
     return (
-        <div className="flex-1 space-y-8">
-        <Item
-            image={product1}
-            title="Butterline Tennis Dress"
-            price="1,000,000vnd"
-            colorDotClass="bg-[#EFE8A8]"
-            stockWarning="Chỉ còn 3 sản phẩm trong kho!"
-            sizes={[
-            { label: "S", active: false },
-            { label: "M", active: true },
-            { label: "L", active: false, disabled: true },
-            { label: "XL", active: false },
-            ]}
-        />
-
-        <Item
-            image={product2}
-            title="Baby Top"
-            price="1,000,000vnd"
-            colorDotClass="bg-white"
-            sizes={[
-            { label: "S", active: false },
-            { label: "M", active: true },
-            { label: "L", active: false },
-            ]}
-        />
-
-        <div className="flex justify-end items-end pt-4">
-            <span className="text-xl font-medium mr-4">Tổng tiền:</span>
-            <span className="text-3xl font-semibold">2,000,000vnd</span>
-        </div>
+        <div className="flex-1">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Lịch sử mua hàng</h2>
+            <div className="space-y-6">
+                {SAMPLE_HISTORY.map((item, idx) => (
+                    <div key={idx} className="flex gap-4 py-4 border-b border-gray-200">
+                        <div className="w-24 h-28 bg-gray-100 rounded overflow-hidden shrink-0">
+                            <img
+                                src={item.imageSrc}
+                                alt={item.productName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { e.target.src = "https://via.placeholder.com/96x112?text=SP"; }}
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <p className="font-medium text-gray-900">{item.productName}</p>
+                            <p className="text-gray-600 mt-1">{formatCurrency(item.price)}</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Size: {item.size} · Số lượng: {item.quantity}
+                            </p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="mt-6 pt-4 border-t border-gray-200">
+                <p className="text-lg font-semibold text-gray-900">
+                    Tổng tiền: {formatCurrency(total)}
+                </p>
+            </div>
         </div>
     );
 }

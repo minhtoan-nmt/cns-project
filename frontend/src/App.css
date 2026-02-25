@@ -4,10 +4,9 @@ body {
   color: #3e3226;
 }
 
+/* Homepage hero */
 #homepage-body {
-  background-image: url('./assets/homepage/homepage_bg.png');
-  background-size: cover;
-  background-position: cover;
+  background-color: #000;
 }
 
 @keyframes marquee {
@@ -22,7 +21,9 @@ body {
 }
 
 .cta-button {
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 /* #support-page {
