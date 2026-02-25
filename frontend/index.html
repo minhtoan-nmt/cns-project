@@ -5,7 +5,15 @@
     <link rel="icon" type="image/png" href="./src/assets/cns_logo.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CNS Shop</title>
-    <script src="https://messenger.svc.chative.io/static/v1.0/channels/sbdd832c0-715c-42c6-878c-5b3e5de6c9ac/messenger.js?mode=livechat" defer="defer"></script>
+    <script>
+      (function(){
+        var c='sbdd832c0-715c-42c6-878c-5b3e5de6c9ac',h=encodeURIComponent(window.location.hostname||'localhost');
+        var s=document.createElement('script');
+        s.src='https://messenger.svc.chative.io/static/v1.0/channels/'+c+'/messenger.js?mode=livechat&hostname='+h;
+        s.defer=true; document.head.appendChild(s);
+      })();
+    </script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div id="root"></div>

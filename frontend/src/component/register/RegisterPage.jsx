@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import Navbar from "../Navbar";
 import { useState } from "react";
+import { getApiBaseUrl, getAuthRegisterUrl } from "../../utils/api";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
+const apiUrl = getApiBaseUrl();
 
 export default function RegisterPage() {
     const [fullName, setFullName] = useState("");
@@ -20,48 +21,70 @@ export default function RegisterPage() {
     const [showPasswordMismatchWarning, setShowPasswordMismatchWarning] = useState(false);
 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const registerUser = async () => {
-        // Check input validation
-        if (fullName === "" || email === "" || username === "" || password === "" || password !== confirmPassword){
-            if (fullName === "") {
-                setShowFullNameWarning(true);
-            }
-            if (email === "") {
-                setShowEmailWarning(true);
-            }
-            if (username === "") {
-                setShowUsernameWarning(true);
-            }
-            if (password === "") {
-                setShowPasswordWarning(true);
-            }
-            if (password !== confirmPassword) {
-                setShowPasswordMismatchWarning(true);
-            }
+        const f = (fullName || "").trim();
+        const e = (email || "").trim();
+        const u = (username || "").trim();
+        const p = (password || "").trim();
+        const cp = (confirmPassword || "").trim();
+        const ph = (phoneNumber || "").trim();
+
+        setShowFullNameWarning(false);
+        setShowEmailWarning(false);
+        setShowPhoneNumberWarning(false);
+        setShowUsernameWarning(false);
+        setShowPasswordWarning(false);
+        setShowPasswordMismatchWarning(false);
+        setErrorMessage("");
+
+        if (f === "" || e === "" || u === "" || p === "" || p !== cp) {
+            if (f === "") setShowFullNameWarning(true);
+            if (e === "") setShowEmailWarning(true);
+            if (u === "") setShowUsernameWarning(true);
+            if (p === "") setShowPasswordWarning(true);
+            if (p !== cp) setShowPasswordMismatchWarning(true);
             return;
         }
 
-        const res = await fetch(`${apiUrl}/auth/register`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                "fullName": fullName,
-                "email": email,
-                "username": username,
-                "password": password,
-                "phoneNumber": phoneNumber,
-            })
-        });
-
-        if (res.ok) {
-            setShowSuccessModal(true);
-        } else {
-            console.log("Status code", res.status);
+        if (!apiUrl) {
+            setErrorMessage("Chưa cấu hình địa chỉ API (VITE_API_BASE_URL).");
+            return;
         }
-    }
+
+        setIsSubmitting(true);
+        try {
+            const res = await fetch(getAuthRegisterUrl(), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "omit",
+                body: JSON.stringify({
+                    fullName: f,
+                    email: e,
+                    username: u,
+                    password: p,
+                    phoneNumber: ph || null,
+                }),
+            });
+
+            if (res.ok) {
+                setShowSuccessModal(true);
+            } else {
+                const text = await res.text();
+                let msg = "Đăng ký thất bại. Vui lòng thử lại.";
+                if (res.status === 406) msg = "Tên tài khoản đã tồn tại. Vui lòng chọn tên khác.";
+                else if (text) try { const j = JSON.parse(text); msg = j.message || j.error || msg; } catch (_) {}
+                setErrorMessage(msg);
+            }
+        } catch (err) {
+            console.error("Register error:", err);
+            setErrorMessage("Không kết nối được máy chủ. Kiểm tra backend đang chạy và mạng.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <>
@@ -94,8 +117,9 @@ export default function RegisterPage() {
                             <input
                                 type="text"
                                 placeholder="Họ và tên"
+                                value={fullName}
                                 className="w-full bg-transparent border border-[#d4c5bc] text-[#4a3b32] px-4 py-3 rounded-lg focus:outline-none focus:border-[#8c7365] placeholder-[#8c7365] text-sm"
-                                onChange={e => setTimeout(() => setFullName(e.target.value), 1000)}
+                                onChange={e => setFullName(e.target.value)}
                             />
                         </div>
                         {showFullNameWarning && (<div className="text-sm text-red-400 relative bottom-4 left-1">
@@ -106,8 +130,9 @@ export default function RegisterPage() {
                             <input
                                 type="email"
                                 placeholder="E-mail"
+                                value={email}
                                 className="w-full bg-transparent border border-[#d4c5bc] text-[#4a3b32] px-4 py-3 rounded-lg focus:outline-none focus:border-[#8c7365] placeholder-[#8c7365] text-sm"
-                                onChange={e => setTimeout(() => setEmail(e.target.value), 1000)}
+                                onChange={e => setEmail(e.target.value)}
                             />
                         </div>
                         {showEmailWarning && (<div className="text-sm text-red-400 relative bottom-4 left-1">
@@ -118,8 +143,9 @@ export default function RegisterPage() {
                             <input
                                 type="text"
                                 placeholder="Số điện thoại"
+                                value={phoneNumber}
                                 className="w-full bg-transparent border border-[#d4c5bc] text-[#4a3b32] px-4 py-3 rounded-lg focus:outline-none focus:border-[#8c7365] placeholder-[#8c7365] text-sm"
-                                onChange={e => setTimeout(() => setPhoneNumber(e.target.value), 1000)}
+                                onChange={e => setPhoneNumber(e.target.value)}
                             />
                         </div>
                         {showPhoneNumberWarning && (<div className="text-sm text-red-400 relative bottom-4 left-1">
@@ -130,8 +156,9 @@ export default function RegisterPage() {
                             <input
                                 type="text"
                                 placeholder="Tên tài khoản"
+                                value={username}
                                 className="w-full bg-transparent border border-[#d4c5bc] text-[#4a3b32] px-4 py-3 rounded-lg focus:outline-none focus:border-[#8c7365] placeholder-[#8c7365] text-sm"
-                                onChange={e => setTimeout(() => setUsername(e.target.value), 1000)}
+                                onChange={e => setUsername(e.target.value)}
                             />
                         </div>
                         {showUsernameWarning && (<div className="text-sm text-red-400 relative bottom-4 left-1">
@@ -142,8 +169,9 @@ export default function RegisterPage() {
                             <input
                                 type="password"
                                 placeholder="Mật khẩu"
+                                value={password}
                                 className="w-full bg-transparent border border-[#d4c5bc] text-[#4a3b32] px-4 py-3 rounded-lg focus:outline-none focus:border-[#8c7365] placeholder-[#8c7365] text-sm"
-                                onChange={e => setTimeout(() => setPassword(e.target.value), 1000)}
+                                onChange={e => setPassword(e.target.value)}
                             />
                         </div>
                         {showPasswordWarning && (<div className="text-sm text-red-400 relative bottom-4 left-1">
@@ -154,21 +182,28 @@ export default function RegisterPage() {
                             <input
                                 type="password"
                                 placeholder="Xác nhận mật khẩu"
+                                value={confirmPassword}
                                 className="w-full bg-transparent border border-[#d4c5bc] text-[#4a3b32] px-4 py-3 rounded-lg focus:outline-none focus:border-[#8c7365] placeholder-[#8c7365] text-sm"
-                                onChange={e => setTimeout(() => setConfirmPassword(e.target.value), 1000)}
+                                onChange={e => setConfirmPassword(e.target.value)}
                             />
                         </div>
                         {showPasswordMismatchWarning && (<div className="text-sm text-red-400 relative bottom-4 left-1">
                             <p>* Mật khẩu chưa trùng khớp</p>
                         </div>)}
+                        {errorMessage && (
+                            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                                {errorMessage}
+                            </div>
+                        )}
                         {/* Register Button */}
                         <div className="flex justify-center mb-6">
-                            <button 
-                                type="button" 
-                                className="bg-[#463325] text-white text-center rounded-full px-16 py-3 text-sm tracking-wide hover:bg-[#2e2118] transition-colors duration-300 w-3/4"
+                            <button
+                                type="button"
+                                className="bg-[#463325] text-white text-center rounded-full px-16 py-3 text-sm tracking-wide hover:bg-[#2e2118] transition-colors duration-300 w-3/4 disabled:opacity-60 disabled:cursor-not-allowed"
                                 onClick={registerUser}
+                                disabled={isSubmitting}
                             >
-                                Đăng ký
+                                {isSubmitting ? "Đang xử lý..." : "Đăng ký"}
                             </button>
                         </div>
                         {/* Login Link */}

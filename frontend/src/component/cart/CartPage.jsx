@@ -3,33 +3,22 @@ import { FiMinus, FiPlus, FiX } from "react-icons/fi";
 import { FaTruck } from "react-icons/fa";
 import Navbar from '../Navbar';
 import Footer from '../Footer';
-// import { mockProducts } from '../product_page/ProductPage';
-import img_4965 from "../../assets/mock_product/IMG_4965.JPG"
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Cookies from 'js-cookie';
+import { getLocalCart, removeFromLocalCart, updateLocalCartQuantity, CART_UPDATED_EVENT } from '../../utils/cartStorage';
 
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
-// --- 1. Chọn lọc dữ liệu ban đầu ---
-// Chỉ lấy 3 sản phẩm có ID cụ thể (ví dụ: 2, 4, 7) để hiển thị trong giỏ
-const selectedIds = [4, 5]; 
 
-// const initialData = mockProducts
-//     .filter(product => selectedIds.includes(product.id)) // Lọc lấy 3 sản phẩm này
-//     .map(product => ({
-//         id: product.id,
-//         name: product.productName,
-//         image: product.imageSrc,
-//         price: Number(product.price),
-//         quantity: 1, // Mặc định số lượng ban đầu là 1
-//         brand: 'CNS Studio',
-//         estimatedShip: 'June 6th',
-//     }));
-
-const initialData = [
-    {id: 1, name: "Some Product", image: img_4965, price: 923847, quantity: 1}
-]
-
-// --- 2. Component CartItem (Nhận thêm các hàm xử lý sự kiện từ cha) ---
+/** Chuẩn hóa item từ API sang format CartItem */
+const normalizeApiItem = (item) => ({
+    id: item.id,
+    name: item.name ?? item.productName ?? 'Sản phẩm',
+    imageSrc: item.imageSrc ?? item.image ?? '',
+    price: Number(item.price) ?? 0,
+    quantity: Number(item.quantity) ?? 1,
+    isLocal: false,
+});
+// --- 1. Component CartItem (Nhận thêm các hàm xử lý sự kiện từ cha) ---
 const CartItem = ({ item, onIncrease, onDecrease, onRemove }) => {
   return (
     <div className="grid grid-cols-12 gap-4 py-8 border-b border-gray-200 items-start text-gray-800 animate-fadeIn">
@@ -37,7 +26,12 @@ const CartItem = ({ item, onIncrease, onDecrease, onRemove }) => {
       {/* Cột 1: Ảnh & Thông tin */}
       <div className="col-span-12 md:col-span-6 flex gap-6">
         <div className="w-24 h-24 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden border border-gray-100">
-          <img src={item.imageSrc} alt={item.name} className="w-full h-full object-cover" /> 
+          <img
+            src={item.imageSrc?.startsWith?.("http") ? item.imageSrc : encodeURI(item.imageSrc || "")}
+            alt={item.name}
+            className="w-full h-full object-cover"
+            onError={(e) => { e.target.src = "https://via.placeholder.com/96?text=Sản+phẩm"; }}
+          /> 
         </div>
         <div className="flex flex-col gap-1">
             <h3 className="font-bold text-lg leading-tight text-gray-900">{item.name}</h3>
@@ -89,127 +83,166 @@ const CartItem = ({ item, onIncrease, onDecrease, onRemove }) => {
 };
 
 // --- 3. Component Chính ---
+/** Chuẩn hóa item từ "Mua Ngay" (state.addedProduct) sang format CartItem */
+const normalizeAddedProduct = (p) => ({
+    id: p.id,
+    name: p.name ?? p.productName ?? 'Sản phẩm',
+    imageSrc: p.imageSrc ?? '',
+    price: Number(p.price) ?? 0,
+    quantity: Number(p.quantity) ?? 1,
+    isLocal: true,
+});
+
 export default function CartPage() {
-    // Sử dụng State để quản lý danh sách sản phẩm
-    const [cartItems, setCartItems] = useState([]);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [apiCartItems, setApiCartItems] = useState([]);
+    const [localCartItems, setLocalCartItems] = useState([]);
     const [cartId, setCartId] = useState("");
+
+    const fromBuyNowProduct = location.state?.fromBuyNow && location.state?.addedProduct
+        ? normalizeAddedProduct(location.state.addedProduct)
+        : null;
+
+    const cartItems = useMemo(() => {
+        const api = (Array.isArray(apiCartItems) ? apiCartItems : []).map(normalizeApiItem);
+        const local = Array.isArray(localCartItems) ? localCartItems : [];
+        const base = [...api, ...local];
+        if (fromBuyNowProduct && !base.some((i) => i.id === fromBuyNowProduct.id)) {
+            return [fromBuyNowProduct, ...base];
+        }
+        return base;
+    }, [apiCartItems, localCartItems, fromBuyNowProduct]);
+
+    useEffect(() => {
+        setLocalCartItems(getLocalCart());
+    }, []);
+
     useEffect(() => {
         const fetchCart = async () => {
+            const token = Cookies.get("token");
             const userId = Cookies.get("id");
+            if (!token || !userId) {
+                setLocalCartItems(getLocalCart());
+                return;
+            }
             let currentCartId = null;
             try {
                 const cartRes = await fetch(`${apiUrl}/api/user/cart?userId=${userId}`, {
-                    headers: {
-                        "Authorization" : `Bearer ${Cookies.get("token")}` 
-                    }
+                    headers: { "Authorization": `Bearer ${token}` }
                 });
-                if (cartRes.ok) {
-                    const cartData = await cartRes.json();
-                    currentCartId = cartData.cartId;
-                } else {
-                    console.log("Failed to fetch cartId, status:", cartRes.status);
-                    setShowFailureNotification(true);
-                    return; // Dừng lại ngay nếu lỗi
+                if (!cartRes.ok) {
+                    setLocalCartItems(getLocalCart());
+                    return;
                 }
+                const cartData = await cartRes.json();
+                currentCartId = cartData?.cartId ?? cartData?.cart_id;
+                setCartId(currentCartId);
             } catch (err) {
-                console.error("Failed to fetch cartId", err);
-                setShowFailureNotification(true);
-                return; // Dừng lại nếu rớt mạng/server sập
+                setLocalCartItems(getLocalCart());
+                return;
             }
-            console.log("Cart Id là", currentCartId);
-            setCartId(currentCartId);
 
-            const res = await fetch(`${apiUrl}/api/cart/${currentCartId}`, {
-                headers: {
-                    "Authorization" : `Bearer ${Cookies.get("token")}` 
+            try {
+                const res = await fetch(`${apiUrl}/api/cart/${currentCartId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (!res.ok) {
+                    setLocalCartItems(getLocalCart());
+                    return;
                 }
-            });
-            if (!res.ok) {
-                console.log("Error fetching data ", res.status)
-            }
-            const data = await res.json();
-            console.log(data);
-            setCartItems(data);
-        }
-        fetchCart();
-    }, [])
-
-    // Logic Tăng số lượng
-    const handleIncrease = async (id) => {
-        setCartItems(prevItems => 
-            prevItems.map(item => 
-                item.id === id && item.quantity > 1 
-                    ? { ...item, quantity: item.quantity + 1 } 
-                    : item
-            )
-        );
-        const response = await fetch(`${apiUrl}/api/products/${id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type" : "application/json",
-                "Authorization" : `Bearer ${Cookies.get("token")}`  
-            },
-            body: JSON.stringify({
-                "cartId": cartId,
-                "quantity": 1,
-                // "size": selectedSize,
-            })
-        });
-        if (!response.ok) {
-            console.log("Response error, status: ", res.status);
-        }
-        
-    };
-
-    // Logic Giảm số lượng (Không giảm dưới 1)
-    const handleDecrease = async (id) => {
-        setCartItems(prevItems => 
-            prevItems.map(item => 
-                item.id === id && item.quantity > 1 
-                    ? { ...item, quantity: item.quantity - 1 } 
-                    : item
-            )
-        );
-
-        const response = await fetch(`${apiUrl}/api/products/${id}`, {
-            method: "DELETE",
-            headers: {
-                "Content-Type" : "application/json",
-                "Authorization" : `Bearer ${Cookies.get("token")}`   
-            },
-            body: JSON.stringify({
-                "cartId": cartId,
-                "quantity": 1,
-                // "size": selectedSize,
-            })
-        });
-        if (!response.ok) {
-            console.log("Response error, status: ", res.status);
-        }
-    };
-
-    // Logic Xóa sản phẩm
-        const handleRemove = async (id) => {
-            // Find the current quantity of the item being removed
-            const itemToRemove = cartItems.find(item => item.id === id);
-            const currentQuantity = itemToRemove ? itemToRemove.quantity : 1;
-            setCartItems(prevItems => prevItems.filter(item => item.id !== id));
-            const response = await fetch(`${apiUrl}/api/products/${id}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type" : "application/json",
-                    "Authorization" : `Bearer ${Cookies.get("token")}`   
-                },
-                body: JSON.stringify({
-                    "cartId": cartId,
-                    "quantity": currentQuantity,
-                    // "size": selectedSize,
-                })
-            });
-            if (!response.ok) {
-                console.log("Response error, status: ", response.status);
+                const data = await res.json();
+                setApiCartItems(Array.isArray(data) ? data : []);
+            } catch (err) {
+                setLocalCartItems(getLocalCart());
             }
         };
+        fetchCart();
+        const onCartUpdated = () => {
+            setLocalCartItems(getLocalCart());
+            fetchCart();
+        };
+        window.addEventListener(CART_UPDATED_EVENT, onCartUpdated);
+        return () => window.removeEventListener(CART_UPDATED_EVENT, onCartUpdated);
+    }, []);
+
+    const itemById = (id) => cartItems.find((item) => item.id === id);
+
+    const handleIncrease = async (id) => {
+        const item = itemById(id);
+        if (!item) return;
+        if (item.isLocal) {
+            updateLocalCartQuantity(id, item.quantity + 1);
+            setLocalCartItems(getLocalCart());
+            return;
+        }
+        setApiCartItems(prev =>
+            prev.map(i => i.id === id ? { ...i, quantity: (i.quantity || 1) + 1 } : i)
+        );
+        try {
+            await fetch(`${apiUrl}/api/products/${id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${Cookies.get("token")}`
+                },
+                body: JSON.stringify({ cartId, quantity: 1 })
+            });
+        } catch (e) {
+            console.error("Increase error", e);
+        }
+    };
+
+    const handleDecrease = async (id) => {
+        const item = itemById(id);
+        if (!item) return;
+        if (item.isLocal) {
+            const q = Math.max(1, item.quantity - 1);
+            updateLocalCartQuantity(id, q);
+            setLocalCartItems(getLocalCart());
+            return;
+        }
+        if (item.quantity <= 1) return;
+        setApiCartItems(prev =>
+            prev.map(i => i.id === id ? { ...i, quantity: (i.quantity || 1) - 1 } : i)
+        );
+        try {
+            await fetch(`${apiUrl}/api/products/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${Cookies.get("token")}`
+                },
+                body: JSON.stringify({ cartId, quantity: 1 })
+            });
+        } catch (e) {
+            console.error("Decrease error", e);
+        }
+    };
+
+    const handleRemove = async (id) => {
+        const item = itemById(id);
+        if (!item) return;
+        const qty = item.quantity || 1;
+        if (item.isLocal) {
+            removeFromLocalCart(id);
+            setLocalCartItems(getLocalCart());
+            return;
+        }
+        setApiCartItems(prev => prev.filter(i => i.id !== id));
+        try {
+            await fetch(`${apiUrl}/api/products/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${Cookies.get("token")}`
+                },
+                body: JSON.stringify({ cartId, quantity: qty })
+            });
+        } catch (e) {
+            console.error("Remove error", e);
+        }
+    };
 
     // Tự động tính lại tổng tiền khi cartItems thay đổi
     const subtotal = useMemo(() => {
@@ -224,6 +257,19 @@ export default function CartPage() {
 
             <div className="flex-grow py-30 container mx-auto px-4 lg:px-8 max-w-6xl">
 
+                {/* Nút đóng giỏ hàng / quay về trang chủ */}
+                <div className="mb-6">
+                    <button
+                        onClick={() => navigate("/")}
+                        className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm font-medium"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Quay về trang chủ
+                    </button>
+                </div>
+
                 {/* Nếu giỏ hàng trống thì hiện thông báo */}
                 {cartItems.length === 0 ? (
                     <div className="text-center py-20 text-gray-500">
@@ -232,6 +278,9 @@ export default function CartPage() {
                     </div>
                 ) : (
                     <>
+                        <p className="text-lg font-semibold text-gray-800 mb-6">
+                            Đang có {cartItems.reduce((s, i) => s + (i.quantity || 1), 0)} đơn hàng
+                        </p>
                         <div className="hidden md:grid grid-cols-12 gap-4 pb-3 border-b border-gray-200 font-bold text-sm text-gray-900">
                             <div className="col-span-6">Sản phẩm</div>
                             <div className="col-span-2 text-center">Giá</div>
