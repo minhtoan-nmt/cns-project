@@ -1,20 +1,9 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import Footer from "../../Footer";
 import Navbar from "../../Navbar";
 import Cookies from "js-cookie";
-import { getLocalCart, CART_UPDATED_EVENT, clearLocalCart } from "../../../utils/cartStorage";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-
-/** Chuẩn hóa item từ API giống CartPage */
-const normalizeApiItem = (item) => ({
-    id: item.id,
-    name: item.name ?? item.productName ?? "Sản phẩm",
-    imageSrc: item.imageSrc ?? item.image ?? "",
-    price: Number(item.price) ?? 0,
-    quantity: Number(item.quantity) ?? 1,
-});
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
 // ==========================================
 // 1. Component Form Thông Tin Giao Hàng
 // ==========================================
@@ -107,27 +96,17 @@ function PaymentMethod({ paymentMethod, setPaymentMethod }) {
 // ==========================================
 // 3. Component Tóm Tắt Đơn Hàng
 // ==========================================
-function OrderSummary({ shippingInfo, paymentMethod, onCloseSuccess }) {
-    const [apiCartItems, setApiCartItems] = useState([]);
-    const [localCartItems, setLocalCartItems] = useState([]);
+function OrderSummary({ shippingInfo, paymentMethod }) {
+    const [cartItems, setCartItems] = useState([]);
     const [cartId, setCartId] = useState("");
-    
-    const cartItems = useMemo(() => {
-        const api = (Array.isArray(apiCartItems) ? apiCartItems : []).map(normalizeApiItem);
-        const local = Array.isArray(localCartItems) ? localCartItems : [];
-        return [...api, ...local];
-    }, [apiCartItems, localCartItems]);
     
     const [showModal, setShowModal] = useState(false);
     const [showNotification, setShowNotification] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     
+    // State mới để lưu kết quả trả về từ API
     const [invoiceResult, setInvoiceResult] = useState(null);
-
-    useEffect(() => {
-        setLocalCartItems(getLocalCart());
-    }, []);
 
     useEffect(() => {
         const fetchCart = async () => {
@@ -141,48 +120,36 @@ function OrderSummary({ shippingInfo, paymentMethod, onCloseSuccess }) {
                 });
                 if (cartRes.ok) {
                     const cartData = await cartRes.json();
-                    currentCartId = cartData?.cartId ?? cartData?.cart_id;
-                    setCartId(currentCartId || "");
-                }
+                    currentCartId = cartData.cartId;
+                    setCartId(currentCartId);
+                } else return;
             } catch (err) {
                 console.error("Failed to fetch cartId", err);
+                return;
             }
 
-            if (currentCartId) {
-                try {
-                    const res = await fetch(`${apiUrl}/api/cart/${currentCartId}`, {
-                        headers: { "Authorization": `Bearer ${token}` }
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        setApiCartItems(Array.isArray(data) ? data : []);
-                    } else {
-                        setApiCartItems([]);
-                    }
-                } catch (err) {
-                    console.error("Error fetching cart items", err);
-                    setApiCartItems([]);
+            try {
+                const res = await fetch(`${apiUrl}/api/cart/${currentCartId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setCartItems(data);
                 }
-            } else {
-                setApiCartItems([]);
+            } catch (err) {
+                console.error("Error fetching cart items", err);
             }
-            setLocalCartItems(getLocalCart());
         };
         fetchCart();
-        const onCartUpdated = () => {
-            setLocalCartItems(getLocalCart());
-            fetchCart();
-        };
-        window.addEventListener(CART_UPDATED_EVENT, onCartUpdated);
-        return () => window.removeEventListener(CART_UPDATED_EVENT, onCartUpdated);
     }, []);
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
     };
 
-    const subTotal = cartItems.reduce((acc, item) => acc + ((item.price || 0) * (item.quantity || 1)), 0);
-    const total = subTotal;
+    const subTotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const shippingFee = cartItems.length > 0 ? 30000 : 0;
+    const total = subTotal + shippingFee;
 
     const handleConfirmOrder = async () => {
         if (!shippingInfo.customerFullName || !shippingInfo.phoneNumber || !shippingInfo.address) {
@@ -196,7 +163,6 @@ function OrderSummary({ shippingInfo, paymentMethod, onCloseSuccess }) {
         setErrorMessage("");
 
         const payload = {
-            userId: Cookies.get("id") || null,
             customerFullName: shippingInfo.customerFullName,
             email: shippingInfo.email,
             phoneNumber: shippingInfo.phoneNumber,
@@ -224,6 +190,9 @@ function OrderSummary({ shippingInfo, paymentMethod, onCloseSuccess }) {
                 // Lưu vào state để hiển thị ra UI
                 setInvoiceResult(data);
                 setShowNotification(true);
+                
+                // Ẩn notification sau 5 giây (để người dùng kịp đọc mã đơn)
+                setTimeout(() => setShowNotification(false), 5000);
             } else {
                 const errorData = await res.json();
                 setErrorMessage(errorData.message || "Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!");
@@ -241,18 +210,18 @@ function OrderSummary({ shippingInfo, paymentMethod, onCloseSuccess }) {
             <h2 className="text-xl font-semibold text-gray-800 mb-5">Tóm tắt đơn hàng</h2>
             
             {cartItems.map((item, idx) => (
-                <div key={item.id || idx} className="space-y-4 mb-6">
+                <div key={idx} className="space-y-4 mb-6">
                     <div className="flex justify-between">
                         <div className="flex">
                             <div className="w-16 h-16 bg-gray-200 rounded-md flex-shrink-0 object-cover overflow-hidden">
-                                <img src={item.imageSrc || item.image} alt={item.name} className="w-full h-full object-cover"/>
+                                <img src={item.image} alt={item.name} className="w-full h-full object-cover"/>
                             </div>
                             <div className="ml-4 flex flex-col justify-center">
                                 <span className="text-sm font-medium text-gray-900 line-clamp-2">{item.name}</span>
                                 <span className="text-sm text-gray-500">Số lượng: {item.quantity}</span>
                             </div>
                         </div>
-                        <span className="text-sm font-medium text-gray-900 mt-2">{formatCurrency((item.price || 0) * (item.quantity || 1))}</span>
+                        <span className="text-sm font-medium text-gray-900 mt-2">{formatCurrency(item.price)}</span>
                     </div>
                 </div>
             ))}
@@ -263,6 +232,10 @@ function OrderSummary({ shippingInfo, paymentMethod, onCloseSuccess }) {
                 <div className="flex justify-between">
                     <span>Tạm tính</span>
                     <span className="font-medium text-gray-900">{formatCurrency(subTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span>Phí giao hàng</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(shippingFee)}</span>
                 </div>
             </div>
 
@@ -301,28 +274,13 @@ function OrderSummary({ shippingInfo, paymentMethod, onCloseSuccess }) {
                 </div>
             )}
 
-            {/* Popup Đặt hàng thành công */}
+            {/* CẬP NHẬT NOTIFICATION ĐỂ HIỂN THỊ INVOICE ID */}
             {showNotification && invoiceResult && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-11/12 mx-4 text-center">
-                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-                            <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Đặt hàng thành công</h3>
-                        <p className="text-gray-600 text-sm mb-1">Cảm ơn bạn đã đặt hàng.</p>
-                        <p className="text-gray-700 font-medium">Mã đơn: <strong className="text-red-800">{invoiceResult.invoiceId}</strong></p>
-                        <button
-                            onClick={() => {
-                                setShowNotification(false);
-                                clearLocalCart();
-                                if (onCloseSuccess) onCloseSuccess();
-                            }}
-                            className="mt-6 w-full py-3 px-4 bg-red-800 text-white font-semibold rounded-lg hover:bg-red-900 transition"
-                        >
-                            Đóng
-                        </button>
+                <div className="fixed bottom-10 right-10 z-50 bg-green-500 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center space-x-3 animate-fade-in-up">
+                    <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <div className="flex flex-col">
+                        <span className="font-medium text-lg">CNS đã lên đơn hàng thành công</span>
+                        <span className="text-sm opacity-90">Mã đơn: <strong>{invoiceResult.invoiceId}</strong></span>
                     </div>
                 </div>
             )}
@@ -334,7 +292,6 @@ function OrderSummary({ shippingInfo, paymentMethod, onCloseSuccess }) {
 // 4. Component Chính (Export Default)
 // ==========================================
 export default function CheckoutPage() {
-    const navigate = useNavigate();
     const [shippingInfo, setShippingInfo] = useState({
         customerFullName: "",
         email: "",
@@ -343,10 +300,6 @@ export default function CheckoutPage() {
     });
 
     const [paymentMethod, setPaymentMethod] = useState("COD");
-
-    const handleCloseOrderSuccess = () => {
-        navigate("/");
-    };
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -358,7 +311,7 @@ export default function CheckoutPage() {
                         <PaymentMethod paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} />
                     </div>
                     <div className="lg:col-span-4">
-                        <OrderSummary shippingInfo={shippingInfo} paymentMethod={paymentMethod} onCloseSuccess={handleCloseOrderSuccess} />
+                        <OrderSummary shippingInfo={shippingInfo} paymentMethod={paymentMethod} />
                     </div>
                 </div>
             </main>
